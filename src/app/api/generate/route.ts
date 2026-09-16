@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchema, query, type Generation } from "@/lib/db";
+import { insertGeneration, reserveCredits, refundCredits } from "@/lib/db";
 import { getSessionUserId } from "@/lib/auth";
 import { generateImage, isAspectRatio, isModelId, MODELS } from "@/lib/generate";
 
@@ -27,39 +27,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown aspect ratio." }, { status: 400 });
   }
 
-  await ensureSchema();
-
   const cost = MODELS.find((m) => m.id === model)!.credits;
 
-  // Reserve credits atomically first so concurrent requests can't both pass a
-  // stale check and drive the balance negative.
-  const reserved = await query<{ credits: number }>`
-    UPDATE users SET credits = credits - ${cost}
-    WHERE id = ${userId} AND credits >= ${cost}
-    RETURNING credits
-  `;
-  if (reserved.length === 0) {
+  const remaining = await reserveCredits(userId, cost);
+  if (remaining === null) {
     return NextResponse.json({ error: "Not enough credits." }, { status: 402 });
   }
-  const remaining = reserved[0].credits;
 
   let imageUrl: string;
   try {
     imageUrl = await generateImage(prompt, model, aspectRatio);
   } catch {
-    await query`UPDATE users SET credits = credits + ${cost} WHERE id = ${userId}`;
+    await refundCredits(userId, cost);
     return NextResponse.json(
       { error: "Generation failed — the image model is unavailable right now. Try again." },
       { status: 502 },
     );
   }
 
-  const rows = await query<Generation>`
-    INSERT INTO generations (user_id, prompt, image_url, model, aspect_ratio)
-    VALUES (${userId}, ${prompt}, ${imageUrl}, ${model}, ${aspectRatio})
-    RETURNING id, user_id, prompt, image_url, model, aspect_ratio, created_at
-  `;
-  const generation = rows[0];
+  const generation = await insertGeneration({
+    user_id: userId,
+    prompt,
+    image_url: imageUrl,
+    model,
+    aspect_ratio: aspectRatio,
+  });
 
   return NextResponse.json({ generation, credits: remaining });
 }

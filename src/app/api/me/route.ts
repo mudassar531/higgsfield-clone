@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ensureSchema, query, type User } from "@/lib/db";
+import { getUserById } from "@/lib/db";
 import { getSessionUserId } from "@/lib/auth";
 
 export async function GET() {
@@ -8,9 +8,12 @@ export async function GET() {
     return NextResponse.json({ user: null });
   }
 
-  await ensureSchema();
-  const rows = await query<Pick<User, "id" | "email" | "credits">>`SELECT id, email, credits FROM users WHERE id = ${userId}`;
-  const user = rows[0];
+  const user = await getUserById(userId);
+  if (!user) {
+    return NextResponse.json({ user: null });
+  }
 
-  return NextResponse.json({ user: user ?? null });
+  return NextResponse.json({
+    user: { id: user.id, email: user.email, credits: user.credits },
+  });
 }

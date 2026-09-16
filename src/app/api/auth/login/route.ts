@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchema, query, type User } from "@/lib/db";
+import { getUserByEmail } from "@/lib/db";
 import { verifyPassword, setSessionCookie } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -11,11 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
   }
 
-  await ensureSchema();
-
-  const rows = await query<User>`SELECT id, email, password_hash, credits FROM users WHERE email = ${email}`;
-  const user = rows[0];
-
+  const user = await getUserByEmail(email);
   if (!user || !verifyPassword(password, user.password_hash)) {
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
   }

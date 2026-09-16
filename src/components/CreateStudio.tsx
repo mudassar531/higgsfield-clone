@@ -20,18 +20,23 @@ export default function CreateStudio() {
   const [latest, setLatest] = useState<GenerationLike | null>(null);
   const [mine, setMine] = useState<GenerationLike[]>([]);
   const [loadingMine, setLoadingMine] = useState(true);
+  const [credits, setCredits] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/generations?scope=mine")
       .then((r) => r.json())
       .then((d) => setMine(d.generations ?? []))
       .finally(() => setLoadingMine(false));
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then((d) => setCredits(d.user?.credits ?? null));
   }, []);
 
   const cost = MODELS.find((m) => m.id === model)?.credits ?? 5;
+  const outOfCredits = credits !== null && credits < cost;
 
   async function onGenerate() {
-    if (!prompt.trim() || loading) return;
+    if (!prompt.trim() || loading || outOfCredits) return;
     setLoading(true);
     setError(null);
     try {
@@ -47,6 +52,7 @@ export default function CreateStudio() {
       }
       setLatest(data.generation);
       setMine((prev) => [data.generation, ...prev]);
+      setCredits(data.credits);
       window.dispatchEvent(new Event("nova:refresh-me"));
     } catch {
       setError("Network error — try again.");
@@ -115,6 +121,11 @@ export default function CreateStudio() {
             </div>
           </div>
 
+          {outOfCredits && !error && (
+            <p className="rounded-lg border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-sm text-amber-300">
+              Not enough credits for this model ({credits} left, needs {cost}).
+            </p>
+          )}
           {error && (
             <p className="rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-300">
               {error}
@@ -123,7 +134,7 @@ export default function CreateStudio() {
 
           <button
             onClick={onGenerate}
-            disabled={loading || !prompt.trim()}
+            disabled={loading || !prompt.trim() || outOfCredits}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-4 py-3 text-sm font-bold text-accent-foreground transition hover:brightness-95 disabled:opacity-60"
           >
             {loading ? (
@@ -134,6 +145,9 @@ export default function CreateStudio() {
               </>
             )}
           </button>
+          {credits !== null && (
+            <p className="text-center text-xs text-muted">{credits} credits remaining</p>
+          )}
         </div>
 
         <div className="space-y-8">

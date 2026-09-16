@@ -3,6 +3,10 @@ import { insertGeneration, reserveCredits, refundCredits } from "@/lib/db";
 import { getSessionUserId } from "@/lib/auth";
 import { generateImage, isAspectRatio, isModelId, MODELS } from "@/lib/generate";
 
+// Pollinations generation can take several seconds; the platform default
+// (10s on Hobby) was cutting requests off mid-flight.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) {
@@ -37,7 +41,8 @@ export async function POST(req: NextRequest) {
   let imageUrl: string;
   try {
     imageUrl = await generateImage(prompt, model, aspectRatio);
-  } catch {
+  } catch (err) {
+    console.error("generateImage failed:", err);
     await refundCredits(userId, cost);
     return NextResponse.json(
       { error: "Generation failed — the image model is unavailable right now. Try again." },

@@ -143,6 +143,10 @@ def main():
         return
     event = data.get("hook_event_name", "")
     session_id = data.get("session_id")
+    if os.environ.get("CAPTURE_DEBUG"):
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        with (STATE_DIR / "debug.log").open("a") as f:
+            f.write(json.dumps(data) + "\n")
     if not session_id:
         return
 
@@ -185,8 +189,15 @@ def main():
         return
 
     if event == "Stop":
-        last_msg = data.get("last_assistant_message") or {}
-        text = last_msg.get("text", "") if isinstance(last_msg, dict) else ""
+        last_msg = data.get("last_assistant_message")
+        # Docs describe this as {"type": ..., "text": ...}, but the installed
+        # CLI (v2.1.273) sends a plain string — handle both.
+        if isinstance(last_msg, dict):
+            text = last_msg.get("text", "")
+        elif isinstance(last_msg, str):
+            text = last_msg
+        else:
+            text = ""
         if not text:
             return
         if state is None:

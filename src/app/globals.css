@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --background: #08090a;
+  --surface: #111214;
+  --surface-2: #17181b;
+  --border: #26272b;
+  --foreground: #f5f6f3;
+  --muted: #9a9ba1;
+  --accent: #d4ff3f;
+  --accent-foreground: #08110a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.masonry {
+  column-count: 1;
+  column-gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .masonry {
+    column-count: 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .masonry {
+    column-count: 3;
+  }
+}
+
+@media (min-width: 1400px) {
+  .masonry {
+    column-count: 4;
+  }
+}
+
+.masonry > * {
+  break-inside: avoid;
+  margin-bottom: 0.75rem;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.4s ease-out both;
+}

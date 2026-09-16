@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Me = { id: string; email: string; credits: number } | null;
@@ -14,7 +14,6 @@ const LINKS = [
 
 export default function NavBar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [me, setMe] = useState<Me>(null);
   const [loading, setLoading] = useState(true);
 
@@ -40,9 +39,9 @@ export default function NavBar() {
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    setMe(null);
-    router.push("/");
-    router.refresh();
+    // Hard navigation on purpose — see AuthForm's onSubmit for why.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/";
   }
 
   return (

@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
-  const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,8 +29,12 @@ export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
         setLoading(false);
         return;
       }
-      router.push(params.get("next") ?? "/create");
-      router.refresh();
+      // Hard navigation rather than the client router: the freshly-set
+      // session cookie needs to be picked up by both the proxy (auth gate)
+      // and every server component that reads it, and a full load is the
+      // simplest way to guarantee that instead of chasing router.refresh()
+      // timing against a just-written cookie.
+      window.location.href = params.get("next") ?? "/create";
     } catch {
       setError("Network error — try again.");
       setLoading(false);

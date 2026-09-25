@@ -1,9 +1,5 @@
-import { put, list } from "@vercel/blob";
+import { neon } from "@neondatabase/serverless";
 import { randomUUID } from "crypto";
-
-// Users and generation records are two JSON files in the same Vercel Blob
-// store as the images: store/users.json and store/generations.json.
-// Each write replaces the whole file, so overlapping writes can drop an update.
 
 export type User = {
   id: string;
@@ -23,91 +19,103 @@ export type Generation = {
   created_at: string;
 };
 
-const USERS_PATH = "store/users.json";
-const GENERATIONS_PATH = "store/generations.json";
-
-async function readJSON<T>(pathname: string, fallback: T): Promise<T> {
-  const { blobs } = await list({ prefix: pathname, limit: 1 });
-  const match = blobs.find((b) => b.pathname === pathname);
-  if (!match) return fallback;
-  const res = await fetch(match.url, { cache: "no-store" });
-  if (!res.ok) return fallback;
-  return (await res.json()) as T;
+export class AccountExistsError extends Error {
+  constructor() {
+    super("An account with this email already exists.");
+    this.name = "AccountExistsError";
+  }
 }
 
-async function writeJSON(pathname: string, data: unknown): Promise<void> {
-  await put(pathname, JSON.stringify(data), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-  });
+function database() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is not configured");
+  return neon(url);
 }
 
+// All credentials stay in Postgres. Blob stores only public image files.
 export async function getUserByEmail(email: string): Promise<User | undefined> {
-  const users = await readJSON<User[]>(USERS_PATH, []);
-  return users.find((u) => u.email === email);
+  const sql = database();
+  const [user] = await sql`SELECT * FROM users WHERE email = ${email}`;
+  return user as User | undefined;
 }
 
 export async function getUserById(id: string): Promise<User | undefined> {
-  const users = await readJSON<User[]>(USERS_PATH, []);
-  return users.find((u) => u.id === id);
+  const sql = database();
+  const [user] = await sql`SELECT * FROM users WHERE id = ${id}`;
+  return user as User | undefined;
 }
 
-export async function createUser(email: string, passwordHash: string): Promise<User> {
-  const users = await readJSON<User[]>(USERS_PATH, []);
-  const user: User = {
-    id: randomUUID(),
-    email,
-    password_hash: passwordHash,
-    credits: 100,
-    created_at: new Date().toISOString(),
-  };
-  users.push(user);
-  await writeJSON(USERS_PATH, users);
-  return user;
+export async function createUser(
+  email: string,
+  passwordHash: string,
+): Promise<User> {
+  const sql = database();
+  const [user] = await sql`
+    INSERT INTO users (id, email, password_hash)
+    VALUES (${randomUUID()}, ${email}, ${passwordHash})
+    ON CONFLICT (email) DO NOTHING
+    RETURNING *
+  `;
+  if (!user) throw new AccountExistsError();
+  return user as User;
 }
 
-/** Atomically-enough (single read-modify-write) deducts credits. Returns the new balance, or null if insufficient. */
-export async function reserveCredits(userId: string, cost: number): Promise<number | null> {
-  const users = await readJSON<User[]>(USERS_PATH, []);
-  const idx = users.findIndex((u) => u.id === userId);
-  if (idx === -1 || users[idx].credits < cost) return null;
-  users[idx].credits -= cost;
-  await writeJSON(USERS_PATH, users);
-  return users[idx].credits;
+function assertCost(cost: number) {
+  if (!Number.isSafeInteger(cost) || cost <= 0) {
+    throw new Error("Credit cost must be a positive integer");
+  }
 }
 
-export async function refundCredits(userId: string, balance: number): Promise<void> {
-  const users = await readJSON<User[]>(USERS_PATH, []);
-  const idx = users.findIndex((u) => u.id === userId);
-  if (idx === -1) return;
-  // Set the balance we already computed. Adding `cost` onto a stale read
-  // of the pre-deduction file grants credits that were never spent.
-  users[idx].credits = balance;
-  await writeJSON(USERS_PATH, users);
+/** Postgres locks the row and checks the balance in the same statement. */
+export async function reserveCredits(
+  userId: string,
+  cost: number,
+): Promise<number | null> {
+  assertCost(cost);
+  const sql = database();
+  const [user] = await sql`
+    UPDATE users SET credits = credits - ${cost}
+    WHERE id = ${userId} AND credits >= ${cost}
+    RETURNING credits
+  `;
+  return user ? (user.credits as number) : null;
+}
+
+/** Add back only this request's cost, preserving other in-flight deductions. */
+export async function refundCredits(
+  userId: string,
+  cost: number,
+): Promise<number> {
+  assertCost(cost);
+  const sql = database();
+  const [user] = await sql`
+    UPDATE users SET credits = credits + ${cost}
+    WHERE id = ${userId}
+    RETURNING credits
+  `;
+  if (!user) throw new Error("Cannot refund a missing account");
+  return user.credits as number;
 }
 
 export async function insertGeneration(
   g: Omit<Generation, "id" | "created_at">,
 ): Promise<Generation> {
-  const generations = await readJSON<Generation[]>(GENERATIONS_PATH, []);
-  const generation: Generation = {
-    ...g,
-    id: randomUUID(),
-    created_at: new Date().toISOString(),
-  };
-  generations.unshift(generation);
-  await writeJSON(GENERATIONS_PATH, generations);
-  return generation;
+  const sql = database();
+  const [generation] = await sql`
+    INSERT INTO generations (id, user_id, prompt, image_url, model, aspect_ratio)
+    VALUES (${randomUUID()}, ${g.user_id}, ${g.prompt}, ${g.image_url}, ${g.model}, ${g.aspect_ratio})
+    RETURNING *
+  `;
+  return generation as Generation;
 }
 
 export async function listGenerations(
   opts: { userId?: string; limit?: number } = {},
 ): Promise<Generation[]> {
-  const generations = await readJSON<Generation[]>(GENERATIONS_PATH, []);
-  const filtered = opts.userId
-    ? generations.filter((g) => g.user_id === opts.userId)
-    : generations;
-  return filtered.slice(0, opts.limit ?? 60);
+  const sql = database();
+  const limit = Math.max(1, Math.min(100, Math.floor(opts.limit ?? 60)));
+  const rows = opts.userId
+    ? await sql`SELECT * FROM generations WHERE user_id = ${opts.userId} ORDER BY created_at DESC, id DESC LIMIT ${limit}`
+    : await sql`SELECT * FROM generations ORDER BY created_at DESC, id DESC LIMIT ${limit}`;
+  return rows as Generation[];
 }

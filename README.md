@@ -1,40 +1,73 @@
-# Nova
+# Nova — a space for imagination
 
-A small creative instrument: the image is the canvas, the prompt is the command, and other people's images are source material.
+Nova turns a written idea into an image. The original interface pairs an immersive emerald-and-terracotta landscape with a warm, editorial gallery. The composer is on the first screen; browsing, reusing a prompt, and creating belong to one flow.
 
-The generator, accounts, and credit ledger are unchanged. The interface is a studio, with a slim rail, a composer, and an explore rail.
+## Design decisions
 
-## Decisions
+- **Create before navigating.** The prompt, style, format, and credit cost are visible together. Starter prompts make the first blank page less intimidating.
+- **Borrow an idea, then change it.** Gallery details reveal the exact prompt and settings. “Use this prompt” returns focus to the composer. It is a text-based starting point, not an image-editing claim.
+- **Keep the work close.** Drafts survive sign-in and reloads in the current browser session. Completed images live in the account’s collection.
+- **Be clear about what is real.** Community images come from saved generations; the included starter artworks are labeled. Styles are creative instructions to one provider, not three invented AI models. Credit balances come from the API.
+- **Make room on small screens.** The composer stacks its controls, navigation gets a menu, image details become a sheet, and the gallery becomes two columns. Keyboard focus, Escape, empty states, and reduced motion are handled.
 
-- **The picture owns the screen.** Create is the studio. Explore is the rail of real images beside it. `/create` redirects home. Looking around does not require an account. Spending credits does.
-- **A reference is a brief, not an edit.** Clicking an image loads its prompt, model, and frame. The model still receives only text.
-- **No fake plans.** `/pricing` explains the only real economy: 100 credits on sign-up, 5 per image, refunded if generation fails.
-- **Quiet chrome.** Off-white studio, one indigo accent, Inter for the interface, mono for credits and shortcuts.
+The hero is original generated artwork, not an image copied from a reference website. Its source and exact prompt are in [the art-direction notes](docs/ART-DIRECTION.md).
 
-## What is real
+## Real backend
 
-- **Generation.** Prompts hit [Pollinations](https://pollinations.ai) through a server route, are re-hosted on Vercel Blob, and are saved.
-- **Accounts.** Email and password, scrypt, a JWT session cookie. 100 credits at sign-up, 5 spent per picture, enforced before the model is called.
-- **Explore.** Live pictures from every account, plus a static starter set in `public/seed/` so the first view does not depend on Pollinations being up.
+Next.js App Router and TypeScript, React 19, Tailwind 4, private Neon Postgres, and Vercel Blob for public image files.
 
-Accounts, credit balances, and image records are JSON files in Vercel Blob: `store/users.json` and `store/generations.json` (`src/lib/db.ts`). The image files live in that same bucket. Each update reads a file and writes the whole file back, so two writes at the same moment can drop one of them. Credits are still checked on the server before an image is requested.
+- Accounts use scrypt password hashes and an HTTP-only signed session cookie.
+- New accounts receive 100 credits. Each generation costs 5. A conditional SQL update prevents concurrent requests from overspending; failures add back only that request’s cost.
+- Image requests reach Pollinations through the server. Image bytes are validated, saved to Blob, and recorded in Postgres with their owner, prompt, style, and frame.
+- Personal collections are scoped to the authenticated account. Finished images and prompts are also visible in the community gallery.
+- There are no mock generation responses, invented subscriptions, or nonfunctional billing controls.
 
-Explicitly out: video, lipsync, 3D, studios, billing.
+The former version used public Blob JSON files for accounts and records. The new adapter requires `DATABASE_URL`; it deliberately does not fall back to public credential storage. Existing records can be imported without changing IDs, balances, hashes, or image URLs.
 
-## Stack
+## Development
 
-Next.js 16 (App Router, TypeScript, Tailwind v4) · Vercel Blob · deployed on Vercel.
-
-## Local development
-
-```bash
+```sh
 npm install
-cp .env.example .env.local   # SESSION_SECRET at minimum
+cp .env.example .env.local
+# Set DATABASE_URL, SESSION_SECRET, and BLOB_READ_WRITE_TOKEN.
+npm run db:migrate
 npm run dev
 ```
 
-Without `BLOB_READ_WRITE_TOKEN`, the studio still renders the starter images. Auth and generation return a clear error instead of crashing.
+`POLLINATIONS_API_KEY` is optional. With a key, the app uses the authenticated API. Otherwise it uses the shared free endpoint, which can be rate-limited by its provider. Failures are shown honestly and the credit refund is attempted automatically.
+
+Without a database connection, starter images remain browsable and account requests return a service-unavailable response. A connected database is required before deployment or submission.
+
+## Migrating the existing submission
+
+```sh
+npm run db:migrate -- --import-blob
+```
+
+This creates the schema, saves a private backup under the ignored `.vercel/migration-backups/`, imports existing records in a transaction, and compares every imported field with the source. It never deletes the source. After the new deployment is verified, remove the old public `store/users.json` from Blob; keep the private backup.
+
+The production session secret should remain unchanged to preserve existing sessions. Preview deployments also need a session secret.
+
+## Validation
+
+```sh
+npm run lint
+npm run build
+npm run test:db
+```
+
+Database integration checks use temporary accounts and clean them up. They cover concurrent credit reservations, refunds during other deductions, duplicate sign-up, and ownership of saved generations. They are skipped when `DATABASE_URL` is absent, not reported as passing.
+
+Browser checks during the redesign cover desktop and mobile layouts, draft restoration through sign-in, starter prompts, style selection, image dialogs, Escape and focus return, prompt reuse, filters, empty states, collection switching, and mobile navigation.
 
 ## Agent capture
 
-`.agent-logs/` contains the verbatim prompt/response log for every turn of the Claude Code session that built the first version, captured via hooks in `.claude/settings.json` (see `CAPTURE-TEST.md`).
+[CAPTURE-TEST.md](CAPTURE-TEST.md) contains the two independent Codex canaries and the earlier Claude capture proof. Codex’s native transcripts are automatically exported by the installed launchd watcher. `.agent-logs/` contains only original human prompts and completed final responses, with UTC timestamps and model identifiers. Internal agent steps, tool calls, and reasoning are excluded.
+
+On another macOS checkout, install the watcher once:
+
+```sh
+python3 scripts/agent-capture/install.py
+```
+
+Logs are committed alongside implementation checkpoints. See the capture proof for the disclosed initial backfill, model switches, and machine-specific limitations.

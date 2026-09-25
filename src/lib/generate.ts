@@ -1,9 +1,9 @@
 import { put } from "@vercel/blob";
 
 export const MODELS = [
-  { id: "flux", label: "Nova Flux", credits: 5 },
-  { id: "flux-realism", label: "Nova Realism", credits: 5 },
-  { id: "flux-anime", label: "Nova Anime", credits: 5 },
+  { id: "flux", label: "Natural", credits: 5 },
+  { id: "flux-realism", label: "Photographic", credits: 5 },
+  { id: "flux-anime", label: "Illustrative", credits: 5 },
 ] as const;
 
 export type ModelId = (typeof MODELS)[number]["id"];
@@ -31,19 +31,54 @@ export async function generateImage(
 ): Promise<string> {
   const { width, height } = ASPECT_RATIOS[aspectRatio];
   const seed = Math.floor(Math.random() * 1_000_000_000);
-  const url =
-    `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}` +
-    `?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true`;
+  // These are creative directions, not claims of three different AI models.
+  // Keep the original IDs so existing saved images and remixes stay compatible.
+  const direction = {
+    flux: "",
+    "flux-realism":
+      "Photorealistic editorial photograph, natural light and realistic textures. ",
+    "flux-anime":
+      "Expressive hand-drawn illustration, anime-inspired composition and rich flat colors. ",
+  }[model];
+  const apiKey = process.env.POLLINATIONS_API_KEY?.trim();
+  const endpoint = apiKey
+    ? "https://gen.pollinations.ai/image/"
+    : "https://image.pollinations.ai/prompt/";
+  const url = new URL(`${endpoint}${encodeURIComponent(direction + prompt)}`);
+  url.search = new URLSearchParams({
+    width: String(width),
+    height: String(height),
+    model: "flux",
+    seed: String(seed),
+    nologo: "true",
+  }).toString();
 
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined,
+    signal: AbortSignal.timeout(45_000),
+    cache: "no-store",
+  });
   if (!res.ok) {
     throw new Error(`Image generation failed (${res.status})`);
   }
+  const contentType = res.headers.get("content-type")?.split(";")[0] ?? "";
+  if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) {
+    throw new Error("The image provider returned an invalid image");
+  }
   const blob = await res.blob();
+  if (!blob.size || blob.size > 20 * 1024 * 1024) {
+    throw new Error("The image provider returned an invalid image size");
+  }
 
-  const { url: blobUrl } = await put(`generations/${seed}.jpg`, blob, {
+  const extension =
+    contentType === "image/png"
+      ? "png"
+      : contentType === "image/webp"
+        ? "webp"
+        : "jpg";
+  const { url: blobUrl } = await put(`generations/${seed}.${extension}`, blob, {
     access: "public",
-    contentType: res.headers.get("content-type") ?? "image/jpeg",
+    contentType,
   });
 
   return blobUrl;

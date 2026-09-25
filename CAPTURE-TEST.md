@@ -1,5 +1,7 @@
 # Capture Test
 
+> **Current redesign (September 25–26):** Codex automatic capture is verified in two independent sessions. See the Codex verification section below for raw canaries. The original Claude proof is preserved. Models are recorded per entry; the interrupted `gpt-6-luna` continuation and subsequent `gpt-6-astra` continuation are visible in the current session log.
+
 ## Tool and model
 
 - **Tool:** Claude Code (CLI), version 2.1.273

@@ -25,7 +25,13 @@ export default function NovaImage({
   if (failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={alt} width={width} height={height} className={className} />
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        className={className}
+      />
     );
   }
 
@@ -36,7 +42,7 @@ export default function NovaImage({
       width={width}
       height={height}
       sizes={sizes}
-      priority={priority}
+      preload={priority}
       className={className}
       onError={() => setFailed(true)}
     />

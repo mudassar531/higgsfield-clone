@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type AccountUser = { email: string; credits: number };
 
@@ -20,10 +26,19 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     function load() {
       fetch("/api/me")
-        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) throw new Error("Account service unavailable");
+          return r.json();
+        })
         .then((d) => {
           if (cancelled) return;
-          setUser(d.user ? { email: d.user.email, credits: d.user.credits } : null);
+          setUser(
+            d.user ? { email: d.user.email, credits: d.user.credits } : null,
+          );
+        })
+        .catch(() => {
+          // Preserve the last known account on transient connection failures.
+          // Protected actions still validate the session and balance on the server.
         })
         .finally(() => {
           if (!cancelled) setReady(true);
@@ -42,7 +57,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         ready,
-        setCredits: (credits) => setUser((current) => (current ? { ...current, credits } : current)),
+        setCredits: (credits) =>
+          setUser((current) => (current ? { ...current, credits } : current)),
       }}
     >
       {children}

@@ -4,20 +4,30 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import Mark from "@/components/nova/Mark";
+import Workspace from "@/components/nova/Workspace";
+
+function safeDestination(value: string | null) {
+  return value &&
+    value.startsWith("/") &&
+    !value.startsWith("//") &&
+    !value.includes("\\")
+    ? value
+    : "/";
+}
 
 export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [visible, setVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const isLogin = mode === "login";
-  const next = params.get("next");
-  const switchHref = `${isLogin ? "/sign-up" : "/login"}${next ? `?next=${encodeURIComponent(next)}` : ""}`;
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  const next = safeDestination(params.get("next"));
+  const switchHref = `${isLogin ? "/sign-up" : "/login"}?next=${encodeURIComponent(next)}`;
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {
@@ -28,48 +38,56 @@ export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong.");
+        setError(data.error ?? "We couldn't sign you in. Please try again.");
         setLoading(false);
         return;
       }
-      // Full load so the new session cookie is visible to server components.
-      window.location.href = params.get("next") ?? "/";
+      window.location.assign(next);
     } catch {
-      setError("Network error — try again.");
+      setError(
+        "We couldn't reach the studio. Please check your connection and try again.",
+      );
       setLoading(false);
     }
   }
-
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
-      <div className="relative hidden min-h-dvh lg:block">
-        <Image
-          src="/seed/5.jpg"
-          alt=""
-          fill
-          priority
-          sizes="58vw"
-          className="object-cover"
-        />
-      </div>
-      <div className="flex items-center justify-center px-6 py-16">
-        <form onSubmit={onSubmit} className="w-full max-w-sm">
-          <Link href="/" className="inline-flex items-center gap-2 text-foreground" aria-label="Nova">
-            <Mark />
-            <span className="text-[15px] font-medium tracking-tight">Nova</span>
-          </Link>
-          <h1 className="mt-8 text-3xl tracking-tight">{isLogin ? "Log in" : "Create an account"}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            {isLogin
-              ? "Your images and credits are on this account."
-              : "100 credits. 5 for each image."}
-          </p>
-
-          <div className="mt-8 space-y-4">
-            <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm">
-                Email
-              </label>
+    <Workspace>
+      <div className="auth-layout">
+        <div className="auth-visual">
+          <Image
+            src="/art/nova-world.webp"
+            alt="A terracotta portal surrounded by misty mountains and emerald water"
+            fill
+            preload
+            sizes="(max-width: 650px) 100vw, 50vw"
+          />
+          <div className="auth-visual-copy">
+            <p>NOVA / A SPACE FOR IMAGINATION</p>
+            <h2>
+              There’s a world
+              <br />
+              only you can imagine.
+            </h2>
+          </div>
+        </div>
+        <div className="auth-panel">
+          <form className="auth-form" onSubmit={onSubmit}>
+            <Link className="auth-back" href="/">
+              ← Back to the studio
+            </Link>
+            <p className="section-kicker">
+              {isLogin ? "PICK UP WHERE YOU LEFT OFF" : "YOUR NEXT CHAPTER"}
+            </p>
+            <h1 className="auth-heading">
+              {isLogin ? "Welcome back." : "Let’s make something."}
+            </h1>
+            <p className="auth-subheading">
+              {isLogin
+                ? "Your ideas, images, and happy accidents are waiting."
+                : "Start with 100 free credits. That’s 20 chances to surprise yourself. No card required."}
+            </p>
+            <div className="auth-field">
+              <label htmlFor="email">Email address</label>
               <input
                 id="email"
                 name="email"
@@ -78,49 +96,75 @@ export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
                 autoComplete="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none"
+                placeholder="you@example.com"
+                disabled={loading}
               />
             </div>
-            <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm">
+            <div className="auth-field">
+              <label htmlFor="password">
                 Password
+                {!isLogin && (
+                  <span className="auth-password-help">
+                    {" "}
+                    · At least 8 characters
+                  </span>
+                )}
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={8}
-                autoComplete={isLogin ? "current-password" : "new-password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none"
-              />
+              <div className="auth-password-row">
+                <input
+                  id="password"
+                  name="password"
+                  type={visible ? "text" : "password"}
+                  required
+                  minLength={8}
+                  autoComplete={isLogin ? "current-password" : "new-password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setVisible(!visible)}
+                  aria-label={visible ? "Hide password" : "Show password"}
+                  aria-pressed={visible}
+                >
+                  {visible ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
-          </div>
-
-          {error && (
-            <p className="mt-4 text-sm text-danger" role="alert">
-              {error}
+            {error && (
+              <p className="auth-error" role="alert">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              className="generate-button auth-submit"
+              disabled={loading}
+              aria-busy={loading}
+            >
+              {loading
+                ? "Opening your studio…"
+                : isLogin
+                  ? "Log in to your studio"
+                  : "Create your free account"}
+              <span aria-hidden>↗</span>
+            </button>
+            <p className="auth-switch">
+              {isLogin
+                ? "New around here?"
+                : "Already have a little world here?"}{" "}
+              <Link href={switchHref}>
+                {isLogin ? "Create an account" : "Log in"}
+              </Link>
             </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="press mt-6 min-h-11 w-full rounded-lg bg-accent text-sm font-medium text-accent-foreground disabled:opacity-40"
-          >
-            {loading ? "Please wait…" : isLogin ? "Log in" : "Create account"}
-          </button>
-
-          <p className="mt-5 text-sm text-muted">
-            {isLogin ? "New to Nova?" : "Already have an account?"}{" "}
-            <Link href={switchHref} className="text-foreground underline underline-offset-4">
-              {isLogin ? "Create an account" : "Log in"}
-            </Link>
-          </p>
-        </form>
+            <p className="auth-sharing-note">
+              Images you create appear in the community gallery. Keep personal
+              information out of your prompts.
+            </p>
+          </form>
+        </div>
       </div>
-    </div>
+    </Workspace>
   );
 }

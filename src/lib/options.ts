@@ -1,9 +1,17 @@
 // Labels for the composer. Ids must stay in sync with src/lib/generate.ts.
 
 export const MODELS = [
-  { id: "flux", label: "Nova Flux", note: "General purpose." },
-  { id: "flux-realism", label: "Nova Realism", note: "Closer to a photograph." },
-  { id: "flux-anime", label: "Nova Anime", note: "Illustrated, flatter color." },
+  { id: "flux", label: "Imaginative", note: "Let the idea lead." },
+  {
+    id: "flux-realism",
+    label: "Photographic",
+    note: "Natural light and lifelike detail.",
+  },
+  {
+    id: "flux-anime",
+    label: "Illustrated",
+    note: "Expressive lines and color.",
+  },
 ] as const;
 
 export const FRAMES = [

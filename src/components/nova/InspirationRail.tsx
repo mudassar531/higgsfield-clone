@@ -1,137 +1,266 @@
 "use client";
 
+import Link from "next/link";
+import { useState } from "react";
 import { useAccount } from "@/components/nova/account";
 import NovaImage from "@/components/nova/NovaImage";
 import { frameMeta, modelLabel } from "@/lib/options";
 import type { GenerationLike } from "@/lib/types";
-import Link from "next/link";
 
 export default function InspirationRail({
   room,
   mine,
   mineReady,
+  mineError,
   tab,
   setTab,
-  activeId,
   onPick,
 }: {
   room: GenerationLike[];
   mine: GenerationLike[];
   mineReady: boolean;
+  mineError: string | null;
   tab: "room" | "yours";
   setTab: (tab: "room" | "yours") => void;
-  activeId: string | null;
   onPick: (generation: GenerationLike, source: "room" | "yours") => void;
 }) {
   const { user, ready } = useAccount();
-  const items = tab === "yours" ? mine : room;
-
+  const [search, setSearch] = useState("");
+  const [style, setStyle] = useState("all");
+  const source = tab === "yours" ? mine : room;
+  const items = source.filter(
+    (item) =>
+      (style === "all" || item.model === style) &&
+      item.prompt.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+  function changeTab(next: "room" | "yours") {
+    setTab(next);
+    setSearch("");
+    setStyle("all");
+  }
   return (
-    <section id="explore" tabIndex={-1} className="gallery-col outline-none" aria-label="Explore">
-      <div className="sticky top-0 z-10 border-b border-border bg-surface px-4 py-3">
-        <h2 className="text-sm font-medium">Explore</h2>
-        <div className="mt-2 flex gap-4" role="tablist" aria-label="Gallery">
-          <Tab selected={tab === "room"} onClick={() => setTab("room")}>
-            The room
-          </Tab>
-          <Tab selected={tab === "yours"} onClick={() => setTab("yours")}>
-            Yours
-          </Tab>
+    <section
+      id="explore"
+      tabIndex={-1}
+      className="gallery-section"
+      aria-labelledby="gallery-title"
+    >
+      <div className="gallery-intro">
+        <div>
+          <p className="section-kicker">
+            {tab === "yours"
+              ? "YOUR PERSONAL COLLECTION"
+              : "THE COMMUNITY CANVAS"}
+          </p>
+          <h2 id="gallery-title" className="gallery-heading">
+            {tab === "yours" ? (
+              <>
+                Made by <em>you.</em>
+              </>
+            ) : (
+              <>
+                A spark for your <em>next idea.</em>
+              </>
+            )}
+          </h2>
+          <p className="gallery-subtitle">
+            {tab === "yours"
+              ? "Every experiment, unexpected turn, and happy accident. All here."
+              : "Different minds. Endless possibilities. Find a prompt and make it your own."}
+          </p>
+        </div>
+        <div
+          className="gallery-tabs"
+          role="tablist"
+          aria-label="Image collection"
+          onKeyDown={(event) => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
+              return;
+            event.preventDefault();
+            const next =
+              event.key === "Home"
+                ? "room"
+                : event.key === "End"
+                  ? "yours"
+                  : tab === "room"
+                    ? "yours"
+                    : "room";
+            changeTab(next);
+            document
+              .getElementById(
+                next === "room" ? "community-tab" : "personal-tab",
+              )
+              ?.focus();
+          }}
+        >
+          <button
+            id="community-tab"
+            className="gallery-tab"
+            role="tab"
+            tabIndex={tab === "room" ? 0 : -1}
+            aria-selected={tab === "room"}
+            aria-controls="gallery-panel"
+            onClick={() => changeTab("room")}
+          >
+            Explore
+          </button>
+          <button
+            id="personal-tab"
+            className="gallery-tab"
+            role="tab"
+            tabIndex={tab === "yours" ? 0 : -1}
+            aria-selected={tab === "yours"}
+            aria-controls="gallery-panel"
+            onClick={() => changeTab("yours")}
+          >
+            My creations
+          </button>
         </div>
       </div>
-
-      <div className="p-3" role="tabpanel">
+      <div className="gallery-filter-bar">
+        <div className="gallery-filters" aria-label="Filter by image style">
+          {[
+            { value: "all", label: "All images" },
+            { value: "flux", label: "Imaginative" },
+            { value: "flux-realism", label: "Photographic" },
+            { value: "flux-anime", label: "Illustrated" },
+          ].map((option) => (
+            <button
+              type="button"
+              key={option.value}
+              onClick={() => setStyle(option.value)}
+              aria-pressed={style === option.value}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <label className="gallery-search-wrap">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden>
+            <circle
+              cx="8.5"
+              cy="8.5"
+              r="5.5"
+              stroke="currentColor"
+              strokeWidth="1.4"
+            />
+            <path d="m13 13 4 4" stroke="currentColor" strokeWidth="1.4" />
+          </svg>
+          <span className="sr-only">Search image prompts</span>
+          <input
+            type="search"
+            className="gallery-search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Find a little inspiration…"
+          />
+        </label>
+      </div>
+      <div
+        id="gallery-panel"
+        role="tabpanel"
+        aria-labelledby={tab === "room" ? "community-tab" : "personal-tab"}
+      >
         {tab === "yours" && ready && !user ? (
-          <div className="px-1 py-6">
-            <p className="text-sm text-muted">Sign in to see the images you make.</p>
-            <Link href="/login?next=/" className="mt-3 inline-block text-sm text-foreground underline underline-offset-4">
-              Sign in
-            </Link>
+          <div className="gallery-empty">
+            <p>Your next great idea deserves a home.</p>
+            <p>Sign in to see the images you create.</p>
+            <Link href="/login?next=%2F%23yours">Sign in to your studio ↗</Link>
           </div>
-        ) : tab === "yours" && !mineReady ? (
-          <div className="grid grid-cols-2 gap-2" aria-hidden>
+        ) : tab === "yours" && (!ready || !mineReady) ? (
+          <div
+            className="gallery-skeleton"
+            role="status"
+            aria-label="Loading your images"
+          >
             {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="h-28 bg-background" />
+              <div key={i} />
             ))}
+          </div>
+        ) : tab === "yours" && mineError ? (
+          <div className="gallery-empty" role="alert">
+            <p>{mineError}</p>
+            <button
+              className="detail-secondary"
+              onClick={() => window.location.reload()}
+            >
+              Try again
+            </button>
           </div>
         ) : items.length === 0 ? (
-          <p className="px-1 py-6 text-sm text-muted">Images you make will show up here.</p>
+          <div className="gallery-empty">
+            <p>
+              {search || style !== "all"
+                ? "No images match just yet. Try another search or style."
+                : "A blank canvas is a good place to start."}
+            </p>
+            {search || style !== "all" ? (
+              <button
+                className="detail-secondary"
+                onClick={() => {
+                  setSearch("");
+                  setStyle("all");
+                }}
+              >
+                Clear filters
+              </button>
+            ) : (
+              <a href="#prompt">Make your first image ↗</a>
+            )}
+          </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {items.map((generation) => (
-              <GenerationThumb
-                key={generation.id}
-                generation={generation}
-                selected={generation.id === activeId}
-                onPick={() => onPick(generation, tab)}
-              />
-            ))}
+          <div className="gallery-grid">
+            {items.map((generation) => {
+              const frame = frameMeta(generation.aspect_ratio);
+              return (
+                <button
+                  key={generation.id}
+                  type="button"
+                  className="gallery-card"
+                  onClick={() => onPick(generation, tab)}
+                  aria-label={`View image: ${generation.prompt}`}
+                >
+                  <span className="gallery-card-media">
+                    <NovaImage
+                      src={generation.image_url}
+                      alt={generation.prompt}
+                      width={frame.width}
+                      height={frame.height}
+                      sizes="(max-width: 650px) 46vw, (max-width: 1000px) 30vw, 23vw"
+                    />
+                    <span className="card-view">
+                      View prompt <span aria-hidden>↗</span>
+                    </span>
+                  </span>
+                  <span className="gallery-card-info">
+                    <span className="gallery-card-prompt">
+                      {generation.prompt}
+                    </span>
+                    <span className="gallery-card-meta">
+                      <span>{modelLabel(generation.model)}</span>
+                      <span className="gallery-badge">
+                        {generation.id.startsWith("seed-")
+                          ? "Starter"
+                          : tab === "yours"
+                            ? "Yours"
+                            : "Community"}
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
-    </section>
-  );
-}
-
-function Tab({
-  selected,
-  onClick,
-  children,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={selected}
-      onClick={onClick}
-      className={`border-b pb-1 text-sm ${
-        selected ? "border-foreground text-foreground" : "border-transparent text-muted hover:text-foreground"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function GenerationThumb({
-  generation,
-  selected,
-  onPick,
-}: {
-  generation: GenerationLike;
-  selected: boolean;
-  onPick: () => void;
-}) {
-  const frame = frameMeta(generation.aspect_ratio);
-  return (
-    <button
-      type="button"
-      onClick={onPick}
-      aria-pressed={selected}
-      aria-label={generation.prompt}
-      title={generation.prompt}
-      className={`group relative block w-full overflow-hidden rounded-[10px] bg-background text-left ${
-        selected ? "outline outline-2 outline-offset-2 outline-accent" : ""
-      }`}
-    >
-      <NovaImage
-        src={generation.image_url}
-        alt=""
-        width={frame.width}
-        height={frame.height}
-        sizes="(min-width: 1100px) 160px, 45vw"
-        className="h-auto w-full"
-      />
-      <span className="pointer-events-none absolute inset-x-1.5 bottom-1.5 flex items-center justify-between gap-2 bg-surface/95 px-1.5 py-1 text-[10px] text-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
-        <span className="truncate font-mono">
-          {modelLabel(generation.model)} · {frame.label}
+      <footer className="gallery-footer">
+        <span>Made of imagination. Made with Nova.</span>
+        <span>
+          Starter artworks are curated examples. Community images are created
+          here.
         </span>
-        <span className="shrink-0 text-accent">Use brief</span>
-      </span>
-    </button>
+        <Link href="/pricing">100 credits to begin. A world to explore. ↗</Link>
+      </footer>
+    </section>
   );
 }

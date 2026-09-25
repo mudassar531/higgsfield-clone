@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Inter } from "next/font/google";
+import { IBM_Plex_Mono, Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -15,15 +15,29 @@ const plex = IBM_Plex_Mono({
   display: "swap",
 });
 
+const editorial = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-editorial",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Nova",
-  description: "Write a prompt, choose a model and a frame, and make an image. Five credits each.",
+  title: "Nova — A space for imagination",
+  description:
+    "Turn a little thought into a whole new world. Create images, explore ideas, and find your next spark in Nova.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${plex.variable} h-full`}>
-      <body className="min-h-dvh bg-background font-sans text-foreground antialiased">{children}</body>
+    <html
+      lang="en"
+      className={`${inter.variable} ${plex.variable} ${editorial.variable} h-full`}
+    >
+      <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
+        {children}
+      </body>
     </html>
   );
 }

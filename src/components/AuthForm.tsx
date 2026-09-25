@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import Mark from "@/components/nova/Mark";
 
 export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
   const params = useSearchParams();
@@ -10,8 +12,9 @@ export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
   const isLogin = mode === "login";
+  const next = params.get("next");
+  const switchHref = `${isLogin ? "/sign-up" : "/login"}${next ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -29,12 +32,8 @@ export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
         setLoading(false);
         return;
       }
-      // Hard navigation rather than the client router: the freshly-set
-      // session cookie needs to be picked up by both the proxy (auth gate)
-      // and every server component that reads it, and a full load is the
-      // simplest way to guarantee that instead of chasing router.refresh()
-      // timing against a just-written cookie.
-      window.location.href = params.get("next") ?? "/create";
+      // Full load so the new session cookie is visible to server components.
+      window.location.href = params.get("next") ?? "/";
     } catch {
       setError("Network error — try again.");
       setLoading(false);
@@ -42,69 +41,86 @@ export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-6 py-16">
-      <h1 className="text-2xl font-black uppercase tracking-tight">
-        {isLogin ? "Welcome back" : "Create your account"}
-      </h1>
-      <p className="mt-2 text-sm text-muted">
-        {isLogin
-          ? "Log in to keep generating."
-          : "Sign up and get 100 free credits."}
-      </p>
-
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold text-muted">
-            Email
-          </label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent"
-            placeholder="you@example.com"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold text-muted">
-            Password
-          </label>
-          <input
-            type="password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent"
-            placeholder="At least 8 characters"
-          />
-        </div>
-
-        {error && (
-          <p className="rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-300">
-            {error}
+    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
+      <div className="relative hidden min-h-dvh lg:block">
+        <Image
+          src="/seed/5.jpg"
+          alt=""
+          fill
+          priority
+          sizes="58vw"
+          className="object-cover"
+        />
+      </div>
+      <div className="flex items-center justify-center px-6 py-16">
+        <form onSubmit={onSubmit} className="w-full max-w-sm">
+          <Link href="/" className="inline-flex items-center gap-2 text-foreground" aria-label="Nova">
+            <Mark />
+            <span className="text-[15px] font-medium tracking-tight">Nova</span>
+          </Link>
+          <h1 className="mt-8 text-3xl tracking-tight">{isLogin ? "Log in" : "Create an account"}</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            {isLogin
+              ? "Your images and credits are on this account."
+              : "100 credits. 5 for each image."}
           </p>
-        )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-full bg-accent px-4 py-3 text-sm font-bold text-accent-foreground transition hover:brightness-95 disabled:opacity-60"
-        >
-          {loading ? "Please wait…" : isLogin ? "Log in" : "Sign up"}
-        </button>
-      </form>
+          <div className="mt-8 space-y-4">
+            <div>
+              <label htmlFor="email" className="mb-1.5 block text-sm">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="mb-1.5 block text-sm">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete={isLogin ? "current-password" : "new-password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none"
+              />
+            </div>
+          </div>
 
-      <p className="mt-6 text-center text-sm text-muted">
-        {isLogin ? "New to Nova?" : "Already have an account?"}{" "}
-        <Link
-          href={isLogin ? "/sign-up" : "/login"}
-          className="font-semibold text-foreground underline underline-offset-2"
-        >
-          {isLogin ? "Sign up" : "Log in"}
-        </Link>
-      </p>
+          {error && (
+            <p className="mt-4 text-sm text-danger" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="press mt-6 min-h-11 w-full rounded-lg bg-accent text-sm font-medium text-accent-foreground disabled:opacity-40"
+          >
+            {loading ? "Please wait…" : isLogin ? "Log in" : "Create account"}
+          </button>
+
+          <p className="mt-5 text-sm text-muted">
+            {isLogin ? "New to Nova?" : "Already have an account?"}{" "}
+            <Link href={switchHref} className="text-foreground underline underline-offset-4">
+              {isLogin ? "Create an account" : "Log in"}
+            </Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }

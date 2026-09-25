@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     imageUrl = await generateImage(prompt, model, aspectRatio);
   } catch (err) {
     console.error("generateImage failed:", err);
-    await refundCredits(userId, cost);
+    await refundCredits(userId, remaining + cost);
     return NextResponse.json(
       { error: "Generation failed — the image model is unavailable right now. Try again." },
       { status: 502 },

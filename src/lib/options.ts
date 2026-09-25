@@ -1,0 +1,32 @@
+// Labels for the composer. Ids must stay in sync with src/lib/generate.ts.
+
+export const MODELS = [
+  { id: "flux", label: "Nova Flux", note: "General purpose." },
+  { id: "flux-realism", label: "Nova Realism", note: "Closer to a photograph." },
+  { id: "flux-anime", label: "Nova Anime", note: "Illustrated, flatter color." },
+] as const;
+
+export const FRAMES = [
+  { id: "1:1", label: "Square", width: 1024, height: 1024 },
+  { id: "3:4", label: "Portrait", width: 864, height: 1152 },
+  { id: "16:9", label: "Wide", width: 1280, height: 720 },
+] as const;
+
+export type ModelId = (typeof MODELS)[number]["id"];
+export type FrameId = (typeof FRAMES)[number]["id"];
+
+export function isModelId(value: string): value is ModelId {
+  return MODELS.some((m) => m.id === value);
+}
+
+export function isFrameId(value: string): value is FrameId {
+  return FRAMES.some((f) => f.id === value);
+}
+
+export function modelLabel(id: string) {
+  return MODELS.find((m) => m.id === id)?.label ?? id;
+}
+
+export function frameMeta(id: string) {
+  return FRAMES.find((f) => f.id === id) ?? FRAMES[0];
+}

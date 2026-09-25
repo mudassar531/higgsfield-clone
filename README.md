@@ -1,60 +1,40 @@
 # Nova
 
-A from-scratch rebuild of [higgsfield.ai](https://higgsfield.ai)'s core product — describe an
-image, get a real AI generation back, browse what others made. Built for the 8x take-home
-assignment (rebuild a live product in 24 hours).
+A small creative instrument: the image is the canvas, the prompt is the command, and other people's images are source material.
 
-Not affiliated with or branded as Higgsfield — same idea, distinct product, so it doesn't
-impersonate the original.
+The generator, accounts, and credit ledger are unchanged. The interface is a studio, with a slim rail, a composer, and an explore rail.
 
-## What's here vs. what's left out
+## Decisions
 
-Higgsfield is a huge surface: 80+ underlying video/image/lipsync models, Cinema Studio,
-Marketing Studio, 3D Jutsu, an MCP/CLI integration, a ChatGPT plugin, Supercomputer agents,
-real billing. Reproducing all of it in a day isn't a serious option, so this rebuild picks the
-single flow that *is* the product — prompt in, image out — and makes that one real:
+- **The picture owns the screen.** Create is the studio. Explore is the rail of real images beside it. `/create` redirects home. Looking around does not require an account. Spending credits does.
+- **A reference is a brief, not an edit.** Clicking an image loads its prompt, model, and frame. The model still receives only text.
+- **No fake plans.** `/pricing` explains the only real economy: 100 credits on sign-up, 5 per image, refunded if generation fails.
+- **Quiet chrome.** Off-white studio, one indigo accent, Inter for the interface, mono for credits and shortcuts.
 
-- **Real generation**, not a mock: prompts hit [Pollinations](https://pollinations.ai) (no API
-  key required) through a server route, get re-hosted on Vercel Blob for permanence, and are
-  saved to Postgres.
-- **Real accounts**: email/password, scrypt-hashed, JWT session cookie, a credits system
-  (100 free credits at sign-up, spent per generation) enforced server-side.
-- **Explore feed**: a masonry gallery mixing live generations from every user with a small
-  static seed set (see below).
-- **Pricing page**: static/illustrative, matching Higgsfield's tiered-plan pattern — explicitly
-  *not* wired to real billing. Stripe integration would have eaten the time budget for a fake
-  payment flow; a working generator was the better trade.
+## What is real
 
-Explicitly out of scope: video generation, lipsync, 3D, Cinema/Marketing Studio, MCP/CLI,
-team accounts, real payments.
+- **Generation.** Prompts hit [Pollinations](https://pollinations.ai) through a server route, are re-hosted on Vercel Blob, and are saved.
+- **Accounts.** Email and password, scrypt, a JWT session cookie. 100 credits at sign-up, 5 spent per picture, enforced before the model is called.
+- **Explore.** Live pictures from every account, plus a static starter set in `public/seed/` so the first view does not depend on Pollinations being up.
+
+Accounts, credit balances, and image records are JSON files in Vercel Blob: `store/users.json` and `store/generations.json` (`src/lib/db.ts`). The image files live in that same bucket. Each update reads a file and writes the whole file back, so two writes at the same moment can drop one of them. Credits are still checked on the server before an image is requested.
+
+Explicitly out: video, lipsync, 3D, studios, billing.
 
 ## Stack
 
-Next.js 16 (App Router, TypeScript, Tailwind v4) · Neon Postgres · Vercel Blob · deployed on
-Vercel.
-
-## Why the seed gallery is static
-
-Pollinations' free tier is flaky under concurrent hot-linking — a dozen simultaneous `<img>`
-requests reliably tripped Chrome's `ERR_BLOCKED_BY_ORB`. Live-linking it directly on the
-landing page made the first impression a wall of broken images, so the starter Explore set is
-pre-downloaded once (`scripts/fetch-seed-images.mjs`) into `public/seed/`. The actual
-generator still calls Pollinations live — that's the real interactive path — and its output is
-re-hosted on Blob rather than hot-linked, so generated images stay reliable after the fact too.
+Next.js 16 (App Router, TypeScript, Tailwind v4) · Vercel Blob · deployed on Vercel.
 
 ## Local development
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in SESSION_SECRET at minimum
+cp .env.example .env.local   # SESSION_SECRET at minimum
 npm run dev
 ```
 
-Without `DATABASE_URL` set, the app still runs — the Explore page falls back to the static
-seed gallery, and auth/generation routes return a clear error instead of crashing.
+Without `BLOB_READ_WRITE_TOKEN`, the studio still renders the starter images. Auth and generation return a clear error instead of crashing.
 
 ## Agent capture
 
-`.agent-logs/` contains the verbatim prompt/response log for every turn of the Claude Code
-session that built this, captured automatically via hooks in `.claude/settings.json` (see
-`CAPTURE-TEST.md` for how that was verified before any app code was written).
+`.agent-logs/` contains the verbatim prompt/response log for every turn of the Claude Code session that built the first version, captured via hooks in `.claude/settings.json` (see `CAPTURE-TEST.md`).

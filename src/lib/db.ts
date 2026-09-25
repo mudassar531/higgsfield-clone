@@ -1,17 +1,9 @@
 import { put, list } from "@vercel/blob";
 import { randomUUID } from "crypto";
 
-// Data layer: two JSON files in the same Vercel Blob store used for
-// generated images, rather than a separate Postgres database. This was a
-// pivot mid-build — Neon (the natural choice) is provisioned through a
-// Vercel marketplace integration that requires the account owner to click
-// through a terms-of-service acceptance in their browser, and that stayed
-// pending. Blob was already wired up with zero extra account friction, and
-// at this project's scale (a handful of accounts, a few dozen generations,
-// effectively no concurrent writers) a JSON store is a fine trade: no
-// schema, no migration, ships now instead of waiting on an external click.
-// It does mean concurrent writes race (last write wins) — acceptable here,
-// would not be for a real multi-user product.
+// Users and generation records are two JSON files in the same Vercel Blob
+// store as the images: store/users.json and store/generations.json.
+// Each write replaces the whole file, so overlapping writes can drop an update.
 
 export type User = {
   id: string;
@@ -86,11 +78,13 @@ export async function reserveCredits(userId: string, cost: number): Promise<numb
   return users[idx].credits;
 }
 
-export async function refundCredits(userId: string, cost: number): Promise<void> {
+export async function refundCredits(userId: string, balance: number): Promise<void> {
   const users = await readJSON<User[]>(USERS_PATH, []);
   const idx = users.findIndex((u) => u.id === userId);
   if (idx === -1) return;
-  users[idx].credits += cost;
+  // Set the balance we already computed. Adding `cost` onto a stale read
+  // of the pre-deduction file grants credits that were never spent.
+  users[idx].credits = balance;
   await writeJSON(USERS_PATH, users);
 }
 

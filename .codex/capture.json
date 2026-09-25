@@ -1,0 +1,7 @@
+{
+  "author": "mudassar531",
+  "project": "8x",
+  "session_directory": "~/.codex/sessions",
+  "poll_seconds": 1,
+  "launchd_label": "com.8x.codex-capture"
+}

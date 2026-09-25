@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -21,17 +22,19 @@ const AccountContext = createContext<AccountValue | null>(null);
 export function AccountProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AccountUser | null>(null);
   const [ready, setReady] = useState(false);
+  const balanceRevision = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
     function load() {
-      fetch("/api/me")
+      const revision = ++balanceRevision.current;
+      fetch("/api/me", { cache: "no-store" })
         .then((r) => {
           if (!r.ok) throw new Error("Account service unavailable");
           return r.json();
         })
         .then((d) => {
-          if (cancelled) return;
+          if (cancelled || revision !== balanceRevision.current) return;
           setUser(
             d.user ? { email: d.user.email, credits: d.user.credits } : null,
           );
@@ -46,9 +49,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
     load();
     window.addEventListener("nova:refresh-me", load);
+    window.addEventListener("focus", load);
+    // Keep other tabs in sync, including a refund after a dropped connection.
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, 10_000);
     return () => {
       cancelled = true;
       window.removeEventListener("nova:refresh-me", load);
+      window.removeEventListener("focus", load);
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -57,8 +67,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         ready,
-        setCredits: (credits) =>
-          setUser((current) => (current ? { ...current, credits } : current)),
+        setCredits: (credits) => {
+          balanceRevision.current++;
+          setUser((current) => (current ? { ...current, credits } : current));
+        },
       }}
     >
       {children}

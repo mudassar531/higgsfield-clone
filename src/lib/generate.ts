@@ -1,9 +1,10 @@
 import { put } from "@vercel/blob";
+import { GENERATION_COST } from "@/lib/options";
 
 export const MODELS = [
-  { id: "flux", label: "Natural", credits: 5 },
-  { id: "flux-realism", label: "Photographic", credits: 5 },
-  { id: "flux-anime", label: "Illustrative", credits: 5 },
+  { id: "flux", label: "Natural", credits: GENERATION_COST },
+  { id: "flux-realism", label: "Photographic", credits: GENERATION_COST },
+  { id: "flux-anime", label: "Illustrative", credits: GENERATION_COST },
 ] as const;
 
 export type ModelId = (typeof MODELS)[number]["id"];

@@ -1,4 +1,5 @@
-// Labels for the composer. Ids must stay in sync with src/lib/generate.ts.
+// Shared pricing for the composer and the server's credit reservation.
+export const GENERATION_COST = 5;
 
 export const MODELS = [
   { id: "flux", label: "Imaginative", note: "Let the idea lead." },

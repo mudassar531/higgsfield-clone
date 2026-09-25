@@ -19,8 +19,16 @@ Checked locally on September 26, 2026 (Asia/Karachi).
 - The first browser draft-restoration assertion ran before React completed hydration. Waiting for the restored value confirmed the actual flow; it was not a missing draft.
 - A wide-screen check timed out while waiting for all lazy image requests to become idle. Rechecking the rendered layout after fonts were ready passed.
 
-## Pending connection
+## Connected backend and credit checks
 
-Neon provisioning is waiting for the account owner to accept the provider terms in Vercel. `DATABASE_URL` is not yet configured. Database integration tests, the legacy-data migration, authenticated end-to-end generation, and deployment verification remain pending; none is claimed as passed.
+- Free Neon database provisioned and connected to Vercel Production, Preview, and Development.
+- Imported and field-verified all 7 existing accounts and 6 generations. Password hashes, IDs, credit balances, timestamps, and image URLs are preserved. Private backup is outside Git.
+- Three real Postgres integration tests pass: 30 concurrent reservations cannot overspend 100 credits, refunds preserve concurrent deductions, and saved generations retain their owner.
+- Real HTTP integration checks pass for signup (100 credits), duplicate signup, incorrect/correct login, invalid prompts without charges, and authenticated account reads.
+- Real provider success: the streamed reservation reports 95 credits before the image completes; the image is saved to Blob and the personal gallery with 95 credits remaining.
+- Deliberate provider rejection on an isolated local server: the streamed balance changes from 100 to 95, then returns to 100 after the server refunds the failed request. No image record is created. Production credentials were not changed for this check.
+- Stream parsing tests pass with one-byte chunks, split Unicode characters, and a reservation delivered before the terminal response.
 
-The legacy image provider was probed with a fresh Flux request and returned an actual JPEG. That confirms provider reachability, not a completed account-to-database generation flow.
+Mobile browser checks also passed against both real servers: form-based signup, visible 100 → 95 deduction while the button is disabled, saved-image completion at 95, failed-generation recovery to 100, and no horizontal overflow. Repeated axe checks on home, login, and credits reported no violations.
+
+Deployment verification is recorded after production rollout.

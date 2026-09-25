@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AccountProvider, useAccount } from "@/components/nova/account";
 import InspirationRail from "@/components/nova/InspirationRail";
@@ -9,11 +9,13 @@ import PromptComposer from "@/components/nova/PromptComposer";
 import ImageDetail from "@/components/nova/ImageDetail";
 import {
   isFrameId,
+  GENERATION_COST,
   isModelId,
   type FrameId,
   type ModelId,
 } from "@/lib/options";
 import type { GenerationLike } from "@/lib/types";
+import { readGenerationEvents } from "@/lib/generation-stream";
 
 const STARTERS = [
   {
@@ -55,6 +57,7 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
   const [model, setModel] = useState<ModelId>("flux");
   const [aspect, setAspect] = useState<FrameId>("1:1");
   const [loading, setLoading] = useState(false);
+  const generationInFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [mine, setMine] = useState<GenerationLike[]>([]);
@@ -149,15 +152,12 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
   function focusPrompt() {
     requestAnimationFrame(() => {
       document.getElementById("prompt")?.focus({ preventScroll: true });
-      document
-        .getElementById("prompt")
-        ?.scrollIntoView({
-          behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
-            .matches
-            ? "instant"
-            : "smooth",
-          block: "center",
-        });
+      document.getElementById("prompt")?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "center",
+      });
     });
   }
   function navigateGallery(next: "room" | "yours") {
@@ -167,14 +167,12 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
       "",
       next === "yours" ? "#yours" : "#explore",
     );
-    document
-      .getElementById("explore")
-      ?.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "instant"
-          : "smooth",
-        block: "start",
-      });
+    document.getElementById("explore")?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+      block: "start",
+    });
   }
   function usePrompt(generation: GenerationLike) {
     setPrompt(generation.prompt.slice(0, 800));
@@ -201,7 +199,7 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
     router.push("/login?next=/");
   }
   async function onGenerate() {
-    if (loading || !ready) return;
+    if (generationInFlight.current || !ready) return;
     if (!prompt.trim()) {
       setError("Start with a few words about the image you have in mind.");
       focusPrompt();
@@ -211,55 +209,76 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
       signInWithDraft();
       return;
     }
-    if (user.credits < 5) {
+    if (user.credits < GENERATION_COST) {
       setError(
         "You've used your credits. Your creations are still in your collection.",
       );
       return;
     }
+    generationInFlight.current = true;
     setLoading(true);
     setError(null);
     setNotice(null);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/x-ndjson",
+        },
         body: JSON.stringify({
           prompt: prompt.trim(),
           model,
           aspectRatio: aspect,
         }),
       });
-      const data = await res.json();
       if (res.status === 401) {
         signInWithDraft();
         return;
       }
       if (!res.ok) {
+        const data = await res.json();
         setError(
           data.error ?? "We couldn't finish that image. Please try again.",
         );
         window.dispatchEvent(new Event("nova:refresh-me"));
         return;
       }
-      setMine((prev) => [data.generation, ...prev]);
-      setRoom((prev) => [data.generation, ...prev]);
-      setMineReady(true);
-      setMineError(null);
-      setTab("yours");
-      setSelectedSource("yours");
-      setSelected(data.generation);
-      setInspiration(null);
-      setNotice("Your image is ready and saved in My creations.");
-      setCredits(data.credits);
-      window.dispatchEvent(new Event("nova:refresh-me"));
+      if (!res.body) throw new Error("Missing generation stream");
+      let finished = false;
+      for await (const event of readGenerationEvents(res.body)) {
+        if (typeof event.credits === "number") setCredits(event.credits);
+        if (event.type === "reserved") {
+          setNotice(
+            `${event.cost} credits deducted. They’ll be returned if this image fails.`,
+          );
+          continue;
+        }
+        finished = true;
+        if (event.type === "error") {
+          setError(event.error);
+          break;
+        }
+        setMine((prev) => [event.generation, ...prev]);
+        setRoom((prev) => [event.generation, ...prev]);
+        setMineReady(true);
+        setMineError(null);
+        setTab("yours");
+        setSelectedSource("yours");
+        setSelected(event.generation);
+        setInspiration(null);
+        setNotice("Your image is ready and saved in My creations.");
+      }
+      if (!finished) throw new Error("Generation stream interrupted");
     } catch {
       setError(
         "The connection was interrupted. Check My creations before trying again.",
       );
       window.dispatchEvent(new Event("nova:refresh-me"));
     } finally {
+      generationInFlight.current = false;
       setLoading(false);
+      window.dispatchEvent(new Event("nova:refresh-me"));
     }
   }
 

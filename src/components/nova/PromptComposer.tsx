@@ -2,7 +2,13 @@
 
 import type { KeyboardEvent } from "react";
 import { useAccount } from "@/components/nova/account";
-import { FRAMES, MODELS, type FrameId, type ModelId } from "@/lib/options";
+import {
+  FRAMES,
+  MODELS,
+  GENERATION_COST,
+  type FrameId,
+  type ModelId,
+} from "@/lib/options";
 import Mark from "@/components/nova/Mark";
 
 export default function PromptComposer({
@@ -33,7 +39,7 @@ export default function PromptComposer({
   onGenerate: () => void;
 }) {
   const { user, ready } = useAccount();
-  const outOfCredits = !!user && user.credits < 5;
+  const outOfCredits = !!user && user.credits < GENERATION_COST;
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
@@ -81,7 +87,7 @@ export default function PromptComposer({
           ) : loading ? (
             <p className="prompt-message-loading">
               <span className="loading-dot" aria-hidden />
-              Bringing your idea to life. This can take a moment.
+              {notice ?? "Starting your image…"}
             </p>
           ) : (
             <p className="prompt-message-notice">{notice}</p>
@@ -121,7 +127,14 @@ export default function PromptComposer({
           </select>
         </label>
         <div className="prompt-control-spacer" />
-        <span className="prompt-cost">✧ 5 credits / image</span>
+        <span className="prompt-cost">
+          <span>✧ {GENERATION_COST} credits / image</span>
+          {user && (
+            <span className="prompt-balance" aria-live="polite">
+              {user.credits} credits left
+            </span>
+          )}
+        </span>
         <button
           className="generate-button"
           type="button"

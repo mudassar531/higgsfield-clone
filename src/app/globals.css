@@ -379,10 +379,16 @@ body {
   flex: 1;
 }
 .prompt-cost {
+  display: grid;
+  gap: 3px;
   color: #686d60;
   font-family: var(--font-plex);
   font-size: 10px;
   white-space: nowrap;
+}
+.prompt-balance {
+  color: #334b3f;
+  font-weight: 600;
 }
 .generate-button {
   display: inline-flex;

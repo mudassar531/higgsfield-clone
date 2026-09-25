@@ -17,7 +17,7 @@ The hero is original generated artwork, not an image copied from a reference web
 Next.js App Router and TypeScript, React 19, Tailwind 4, private Neon Postgres, and Vercel Blob for public image files.
 
 - Accounts use scrypt password hashes and an HTTP-only signed session cookie.
-- New accounts receive 100 credits. Each generation costs 5. A conditional SQL update prevents concurrent requests from overspending; failures add back only that request’s cost.
+- New accounts receive 100 credits. Each generation costs 5. A conditional SQL update prevents concurrent requests from overspending; failures add back only that request’s cost. The API streams the confirmed deduction immediately and streams the refunded balance on failure. The header and composer show the remaining balance; visible tabs also refresh it every 10 seconds.
 - Image requests reach Pollinations through the server. Image bytes are validated, saved to Blob, and recorded in Postgres with their owner, prompt, style, and frame.
 - Personal collections are scoped to the authenticated account. Finished images and prompts are also visible in the community gallery.
 - There are no mock generation responses, invented subscriptions, or nonfunctional billing controls.
@@ -54,6 +54,9 @@ The production session secret should remain unchanged to preserve existing sessi
 npm run lint
 npm run build
 npm run test:db
+node --test tests/generation-stream.test.mjs
+# With the development server running:
+NOVA_TEST_BASE_URL=http://localhost:3000 NOVA_TEST_GENERATION=success node --env-file=.env.local --test tests/api.integration.test.mjs
 ```
 
 Database integration checks use temporary accounts and clean them up. They cover concurrent credit reservations, refunds during other deductions, duplicate sign-up, and ownership of saved generations. They are skipped when `DATABASE_URL` is absent, not reported as passing.

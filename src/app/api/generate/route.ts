@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { insertGeneration, reserveCredits, refundCredits } from "@/lib/db";
 import { getSessionUserId } from "@/lib/auth";
 import {
@@ -59,35 +59,77 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not enough credits." }, { status: 402 });
   }
 
-  try {
-    const imageUrl = await generateImage(prompt, model, aspectRatio);
-    const generation = await insertGeneration({
-      user_id: userId,
-      prompt,
-      image_url: imageUrl,
-      model,
-      aspect_ratio: aspectRatio,
-    });
-    return NextResponse.json({ generation, credits: remaining });
-  } catch (err) {
-    console.error(
-      "Generation failed",
-      err instanceof Error ? err.name : "UnknownError",
-    );
-    let credits: number;
+  const finishGeneration = async () => {
     try {
-      // This covers provider, image storage, and record persistence failures.
-      credits = await refundCredits(userId, cost);
-    } catch (refundError) {
-      return serviceUnavailable("Restore generation credits", refundError);
+      const imageUrl = await generateImage(prompt, model, aspectRatio);
+      const generation = await insertGeneration({
+        user_id: userId,
+        prompt,
+        image_url: imageUrl,
+        model,
+        aspect_ratio: aspectRatio,
+      });
+      return NextResponse.json({ generation, credits: remaining });
+    } catch (err) {
+      console.error(
+        "Generation failed",
+        err instanceof Error ? err.name : "UnknownError",
+      );
+      let credits: number;
+      try {
+        // This covers provider, image storage, and record persistence failures.
+        credits = await refundCredits(userId, cost);
+      } catch (refundError) {
+        return serviceUnavailable("Restore generation credits", refundError);
+      }
+      return NextResponse.json(
+        {
+          error:
+            "This image couldn’t be created. Your credits have been restored. Please try again.",
+          credits,
+        },
+        { status: 502 },
+      );
     }
-    return NextResponse.json(
-      {
-        error:
-          "This image couldn’t be created. Your credits have been restored. Please try again.",
-        credits,
-      },
-      { status: 502 },
-    );
+  };
+
+  const result = finishGeneration();
+  // Finish persistence/refunds even if the browser closes the response stream.
+  after(async () => {
+    await result;
+  });
+  if (!req.headers.get("accept")?.includes("application/x-ndjson")) {
+    return result;
   }
+
+  let disconnected = false;
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: object) => {
+        if (!disconnected)
+          controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      };
+      send({ type: "reserved", credits: remaining, cost });
+      try {
+        const response = await result;
+        send({
+          type: response.ok ? "complete" : "error",
+          ...(await response.json()),
+        });
+      } finally {
+        if (!disconnected) controller.close();
+      }
+    },
+    cancel() {
+      disconnected = true;
+    },
+  });
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store, no-transform",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }

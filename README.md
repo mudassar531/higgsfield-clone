@@ -44,7 +44,7 @@ Without a database connection, starter images remain browsable and account reque
 npm run db:migrate -- --import-blob
 ```
 
-This creates the schema, saves a private backup under the ignored `.vercel/migration-backups/`, imports existing records in a transaction, and compares every imported field with the source. It never deletes the source. After the new deployment is verified, remove the old public `store/users.json` from Blob; keep the private backup.
+This creates the schema, saves a private backup under the ignored `.vercel/migration-backups/`, imports existing records in a transaction, and compares every imported field with the source. It never deletes the source. After the new deployment was verified, the old public `store/users.json` was removed from Blob; the private backup remains in the ignored local migration directory.
 
 The production session secret should remain unchanged to preserve existing sessions. Preview deployments also need a session secret.
 

@@ -1,6 +1,6 @@
 # Redesign validation
 
-Checked locally on September 26, 2026 (Asia/Karachi).
+Checked locally and on production on September 26, 2026 (Asia/Karachi).
 
 ## Passed
 
@@ -31,4 +31,10 @@ Checked locally on September 26, 2026 (Asia/Karachi).
 
 Mobile browser checks also passed against both real servers: form-based signup, visible 100 → 95 deduction while the button is disabled, saved-image completion at 95, failed-generation recovery to 100, and no horizontal overflow. Repeated axe checks on home, login, and credits reported no violations.
 
-Deployment verification is recorded after production rollout.
+## Production deployment
+
+- Deployed commit `751bf3d` to Vercel Production and aliased at https://higgsfield-clone-rose.vercel.app.
+- Vercel production build completed and the deployment reached `READY`.
+- The public mobile browser flow passed: signup, streamed 100 → 95 credit deduction, completed image saved to the personal collection, and final 95 credit balance.
+- The same production origin passed API signup/login, DB reads, image generation, Blob image retrieval, personal-gallery ownership, and final balance checks.
+- The old public account JSON was deleted after the database cutover and verified as HTTP 404. Its private migration backup remains outside Git.

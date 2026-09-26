@@ -20,6 +20,18 @@ export function SiteHeader({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const account = useRef<HTMLDivElement>(null);
+  const mobileToggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        mobileToggle.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [mobileOpen]);
   useEffect(() => {
     if (!overlay) return;
     const update = () => setScrolled(window.scrollY > 48);
@@ -54,7 +66,9 @@ export function SiteHeader({
     }
   }
   return (
-    <header className={`site-header ${overlay ? `site-header-overlay${scrolled ? " is-scrolled" : ""}` : "site-header-solid"}`}>
+    <header
+      className={`site-header ${overlay ? `site-header-overlay${scrolled ? " is-scrolled" : ""}` : "site-header-solid"}`}
+    >
       <div className="site-header-inner">
         <Link href="/" className="wordmark" aria-label="Nova home">
           <Mark className="wordmark-flower h-7 w-7" />
@@ -96,6 +110,7 @@ export function SiteHeader({
         </nav>
         <div className="site-actions">
           <button
+            ref={mobileToggle}
             className="mobile-nav-toggle"
             type="button"
             aria-label={mobileOpen ? "Close navigation" : "Open navigation"}

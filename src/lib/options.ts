@@ -37,5 +37,7 @@ export function modelLabel(id: string) {
 }
 
 export function frameMeta(id: string) {
+  // Editorial artwork can use a display format the generation API does not offer.
+  if (id === "4:3") return { id, label: "Landscape", width: 1200, height: 900 };
   return FRAMES.find((f) => f.id === id) ?? FRAMES[0];
 }

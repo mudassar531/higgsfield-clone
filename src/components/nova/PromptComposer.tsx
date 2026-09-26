@@ -50,11 +50,11 @@ export default function PromptComposer({
     <div className={`prompt-card ${loading ? "is-generating" : ""}`}>
       <div className="prompt-card-main">
         <div className="prompt-topline">
-          <label htmlFor="prompt">A few words. Endless possibilities.</label>
+          <label htmlFor="prompt">Your next image starts here</label>
           <span className="prompt-tip">
             {prompt.length > 0
               ? `${prompt.length}/800`
-              : "Your imagination starts here"}
+              : "Text to image"}
           </span>
         </div>
         {inspiration && (
@@ -73,7 +73,7 @@ export default function PromptComposer({
           maxLength={800}
           rows={2}
           disabled={loading}
-          placeholder="A quiet place that doesn't exist. Yet…"
+          placeholder="A cloud with somewhere to be…"
           className="prompt-textarea"
           aria-describedby={error ? "prompt-error" : undefined}
         />
@@ -96,7 +96,7 @@ export default function PromptComposer({
       )}
       <div className="prompt-controls">
         <span className="prompt-control-label">
-          <Mark className="h-4 w-4" /> Create image
+          <Mark className="h-4 w-4" /> Image studio
         </span>
         <label>
           <span className="sr-only">Image style</span>

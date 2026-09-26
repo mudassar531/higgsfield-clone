@@ -1,5 +1,7 @@
 # Redesign validation
 
+This document records the earlier backend cutover and design. For the latest complete visual redesign and its checks, see [Playground redesign](PLAYGROUND-REDESIGN.md).
+
 Checked locally and on production on September 26, 2026 (Asia/Karachi).
 
 ## Passed

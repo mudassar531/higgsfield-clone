@@ -7,8 +7,7 @@ import InspirationRail from "@/components/nova/InspirationRail";
 import { SiteHeader } from "@/components/nova/NavigationRail";
 import PromptComposer from "@/components/nova/PromptComposer";
 import ImageDetail from "@/components/nova/ImageDetail";
-import NovaExperience from "@/components/experience/NovaExperience";
-import StoryBridge from "@/components/experience/StoryBridge";
+import PlaygroundHero from "@/components/playground/PlaygroundHero";
 import {
   isFrameId,
   GENERATION_COST,
@@ -183,6 +182,7 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
     setPrompt(generation.prompt.slice(0, 800));
     if (isModelId(generation.model)) setModel(generation.model);
     if (isFrameId(generation.aspect_ratio)) setAspect(generation.aspect_ratio);
+    else if (generation.aspect_ratio === "4:3") setAspect("16:9");
     setSelected(null);
     setInspiration("Inspired by a shared prompt. Add your own twist.");
     setError(null);
@@ -270,6 +270,7 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
         setMineError(null);
         setTab("yours");
         setSelectedSource("yours");
+        setSelectedOrigin(null);
         setSelected(event.generation);
         setInspiration(null);
         setNotice("Your image is ready and saved in My creations.");
@@ -292,82 +293,77 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
       <a href="#prompt" className="skip-link">
         Skip to create an image
       </a>
-      <section className="studio-hero" aria-labelledby="studio-title" data-idea={activeIdea}>
-        <div className="studio-hero-art" aria-hidden="true" />
-        <NovaExperience idea={activeIdea} />
-        <SiteHeader
-          overlay
-          onGallery={navigateGallery}
-          onBeforeAuth={saveDraft}
+      <SiteHeader
+        overlay
+        onGallery={navigateGallery}
+        onBeforeAuth={saveDraft}
+      />
+      <PlaygroundHero
+        activeIdea={activeIdea}
+        loading={loading}
+        onPick={(image, origin) => {
+          setSelected(image);
+          setSelectedSource("room");
+          setSelectedOrigin(origin);
+        }}
+      >
+        <PromptComposer
+          prompt={prompt}
+          setPrompt={(value) => {
+            setPrompt(value);
+            setNotice(null);
+            setError(null);
+          }}
+          model={model}
+          setModel={setModel}
+          aspect={aspect}
+          setAspect={setAspect}
+          loading={loading}
+          error={error}
+          notice={notice}
+          inspiration={inspiration}
+          onClearInspiration={() => setInspiration(null)}
+          onGenerate={() => void onGenerate()}
         />
-        <div className="studio-hero-content">
-          <p className="hero-kicker">An open space for imagination</p>
-          <h1 id="studio-title" className="hero-title">
-            <span className="hero-line"><span>A little thought.</span></span>
-            <span className="hero-line hero-line-second"><span>A whole new <em>world.</em></span></span>
-          </h1>
-          <p className="hero-description">
-            The extraordinary starts with an idea.
-            <br />
-            Turn yours into images worth getting lost in.
-          </p>
-          <div className="hero-fineprint">
-            <span aria-hidden>✧</span> 100 credits on us. No card, just
-            curiosity.
-          </div>
-        </div>
-        <div className="hero-art-caption" aria-hidden="true">
-          <span>01 / THE OTHER SIDE</span>
-          <span>Nova studio artwork</span>
-        </div>
-        <div className="hero-composer-wrap">
-          <div className="composer-stack">
-            <PromptComposer
-              prompt={prompt}
-              setPrompt={(value) => {
-                setPrompt(value);
-                setNotice(null);
+        <div className="prompt-starters">
+          <span>Need a spark?</span>
+          {STARTERS.map((starter, index) => (
+            <button
+              key={starter.label}
+              type="button"
+              disabled={loading}
+              onMouseEnter={() => setActiveIdea(index)}
+              onMouseLeave={() => setActiveIdea(-1)}
+              onFocus={() => setActiveIdea(index)}
+              onBlur={() => setActiveIdea(-1)}
+              onClick={() => {
+                setPrompt(starter.prompt);
+                setModel(starter.model);
+                setAspect(starter.aspect);
                 setError(null);
+                setNotice(null);
+                if (
+                  !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                ) {
+                  document
+                    .querySelector(".prompt-card")
+                    ?.animate(
+                      [
+                        { transform: "translateY(0)" },
+                        { transform: "translateY(-4px)" },
+                        { transform: "translateY(0)" },
+                      ],
+                      { duration: 360, easing: "ease-out" },
+                    );
+                }
+                focusPrompt();
               }}
-              model={model}
-              setModel={setModel}
-              aspect={aspect}
-              setAspect={setAspect}
-              loading={loading}
-              error={error}
-              notice={notice}
-              inspiration={inspiration}
-              onClearInspiration={() => setInspiration(null)}
-              onGenerate={() => void onGenerate()}
-            />
-            <div className="prompt-starters">
-              <span>NEED A SPARK?</span>
-              {STARTERS.map((starter, index) => (
-                <button
-                  key={starter.label}
-                  type="button"
-                  disabled={loading}
-                  onMouseEnter={() => setActiveIdea(index)}
-                  onMouseLeave={() => setActiveIdea(-1)}
-                  onFocus={() => setActiveIdea(index)}
-                  onBlur={() => setActiveIdea(-1)}
-                  onClick={() => {
-                    setPrompt(starter.prompt);
-                    setModel(starter.model);
-                    setAspect(starter.aspect);
-                    setError(null);
-                    setNotice(null);
-                    focusPrompt();
-                  }}
-                >
-                  {starter.label} <span aria-hidden>↗</span>
-                </button>
-              ))}
-            </div>
-          </div>
+            >
+              {starter.label} <span aria-hidden>↗</span>
+            </button>
+          ))}
         </div>
-      </section>
-      <StoryBridge images={room} />
+      </PlaygroundHero>
       <InspirationRail
         room={room}
         mine={mine}

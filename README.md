@@ -1,6 +1,6 @@
 # Nova — a space for imagination
 
-Nova turns a written idea into an image. The original interface pairs an immersive emerald-and-terracotta landscape with a warm, editorial gallery. The composer is on the first screen; browsing, reusing a prompt, and creating belong to one flow.
+Nova turns a written idea into an image. Its idea-playground interface pairs oversized cobalt typography with playful original artwork and a loose editorial gallery. The composer is on the first screen; browsing, reusing a prompt, and creating belong to one flow.
 
 ## Design decisions
 
@@ -8,13 +8,13 @@ Nova turns a written idea into an image. The original interface pairs an immersi
 - **Borrow an idea, then change it.** Gallery details reveal the exact prompt and settings. “Use this prompt” returns focus to the composer. It is a text-based starting point, not an image-editing claim.
 - **Keep the work close.** Drafts survive sign-in and reloads in the current browser session. Completed images live in the account’s collection.
 - **Be clear about what is real.** Community images come from saved generations; the included starter artworks are labeled. Styles are creative instructions to one provider, not three invented AI models. Credit balances come from the API.
-- **Make room on small screens.** The composer stacks its controls, navigation gets a menu, image details become a sheet, and the gallery becomes two columns. Keyboard focus, Escape, empty states, and reduced motion are handled.
+- **Make room on small screens.** The prints get a separate mobile composition, the composer stacks its controls, navigation gets a menu, and the gallery mixes full-width and paired artwork. Keyboard focus, Escape, empty states, and reduced motion are handled.
 
 ## Scope
 
 Higgsfield has grown into a broad creative suite with separate image, video, audio, effects, Cinema Studio, Genjutsu, MCP, API, and business tools. Nova deliberately rebuilds one end-to-end slice: prompt-to-image creation, a real generation provider, saved personal work, and a browsable gallery. It does not pretend to implement the rest of Higgsfield’s model catalogue, OAuth providers, subscriptions, or studios. The assignment rewards product judgment as well as polish; a complete image flow keeps generation, credits, persistence, and responsive UX real within the available time.
 
-The hero is original generated artwork, not an image copied from a reference website. Its source and exact prompt are in [the art-direction notes](docs/ART-DIRECTION.md).
+The three hero studies are original generated artworks, explicitly labelled separately from community output. The current design, source prompts, and validation are in [the playground redesign notes](docs/PLAYGROUND-REDESIGN.md). The previous landscape direction is archived in [the earlier art-direction notes](docs/ART-DIRECTION.md).
 
 ## Real backend
 

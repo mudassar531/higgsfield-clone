@@ -55,18 +55,18 @@ export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
       <div className="auth-layout">
         <div className="auth-visual">
           <Image
-            src="/art/nova-world.webp"
-            alt="A terracotta portal surrounded by misty mountains and emerald water"
+            src="/art/bloom.webp"
+            alt="An oversized orange poppy in a chrome vase against a pink background"
             fill
             preload
             sizes="(max-width: 650px) 100vw, 50vw"
           />
           <div className="auth-visual-copy">
-            <p>NOVA / A SPACE FOR IMAGINATION</p>
+            <p>A little room for big ideas.</p>
             <h2>
-              There’s a world
+              Your next idea
               <br />
-              only you can imagine.
+              looks good on you.
             </h2>
           </div>
         </div>
@@ -76,7 +76,7 @@ export default function AuthForm({ mode }: { mode: "login" | "sign-up" }) {
               ← Back to the studio
             </Link>
             <p className="section-kicker">
-              {isLogin ? "PICK UP WHERE YOU LEFT OFF" : "YOUR NEXT CHAPTER"}
+              {isLogin ? "Good to see you again" : "Make yourself at home"}
             </p>
             <h1 className="auth-heading">
               {isLogin ? "Welcome back." : "Let’s make something."}

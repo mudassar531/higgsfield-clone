@@ -18,7 +18,15 @@ export function SiteHeader({
   const [open, setOpen] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const account = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!overlay) return;
+    const update = () => setScrolled(window.scrollY > 48);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [overlay]);
   useEffect(() => {
     if (!open) return;
     function close(event: MouseEvent) {
@@ -46,7 +54,7 @@ export function SiteHeader({
     }
   }
   return (
-    <header className={`site-header ${overlay ? "" : "site-header-solid"}`}>
+    <header className={`site-header ${overlay ? `site-header-overlay${scrolled ? " is-scrolled" : ""}` : "site-header-solid"}`}>
       <div className="site-header-inner">
         <Link href="/" className="wordmark" aria-label="Nova home">
           <Mark className="wordmark-flower h-7 w-7" />

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useAccount } from "@/components/nova/account";
 import NovaImage from "@/components/nova/NovaImage";
 import { frameMeta, modelLabel } from "@/lib/options";
@@ -22,11 +22,12 @@ export default function InspirationRail({
   mineError: string | null;
   tab: "room" | "yours";
   setTab: (tab: "room" | "yours") => void;
-  onPick: (generation: GenerationLike, source: "room" | "yours") => void;
+  onPick: (generation: GenerationLike, source: "room" | "yours", origin: DOMRect) => void;
 }) {
   const { user, ready } = useAccount();
   const [search, setSearch] = useState("");
   const [style, setStyle] = useState("all");
+  const [activeColor, setActiveColor] = useState("#aab59e");
   const source = tab === "yours" ? mine : room;
   const items = source.filter(
     (item) =>
@@ -44,6 +45,7 @@ export default function InspirationRail({
       tabIndex={-1}
       className="gallery-section"
       aria-labelledby="gallery-title"
+      style={{ "--gallery-glow": activeColor } as CSSProperties}
     >
       <div className="gallery-intro">
         <div>
@@ -210,14 +212,16 @@ export default function InspirationRail({
           </div>
         ) : (
           <div className="gallery-grid">
-            {items.map((generation) => {
+            {items.map((generation, index) => {
               const frame = frameMeta(generation.aspect_ratio);
               return (
                 <button
                   key={generation.id}
                   type="button"
                   className="gallery-card"
-                  onClick={() => onPick(generation, tab)}
+                  onClick={(event) => onPick(generation, tab, event.currentTarget.getBoundingClientRect())}
+                  onMouseEnter={() => setActiveColor(["#bb8c6e", "#8da99a", "#999cad", "#c5a180"][index % 4])}
+                  onFocus={() => setActiveColor(["#bb8c6e", "#8da99a", "#999cad", "#c5a180"][index % 4])}
                   aria-label={`View image: ${generation.prompt}`}
                 >
                   <span className="gallery-card-media">

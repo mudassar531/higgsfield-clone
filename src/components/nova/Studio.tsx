@@ -7,6 +7,8 @@ import InspirationRail from "@/components/nova/InspirationRail";
 import { SiteHeader } from "@/components/nova/NavigationRail";
 import PromptComposer from "@/components/nova/PromptComposer";
 import ImageDetail from "@/components/nova/ImageDetail";
+import NovaExperience from "@/components/experience/NovaExperience";
+import StoryBridge from "@/components/experience/StoryBridge";
 import {
   isFrameId,
   GENERATION_COST,
@@ -69,6 +71,9 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
     "room",
   );
   const [inspiration, setInspiration] = useState<string | null>(null);
+  const [activeIdea, setActiveIdea] = useState(-1);
+  const [selectedOrigin, setSelectedOrigin] = useState<DOMRect | null>(null);
+  const userEmail = user?.email;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -124,10 +129,10 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
   }, []);
 
   useEffect(() => {
+    if (!ready || !userEmail) return;
     let cancelled = false;
     fetch("/api/generations?scope=mine")
       .then(async (res) => {
-        if (res.status === 401) return { generations: [] };
         if (!res.ok)
           throw new Error("We couldn't load your images. Please try again.");
         return res.json();
@@ -147,7 +152,7 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [ready, userEmail]);
 
   function focusPrompt() {
     requestAnimationFrame(() => {
@@ -287,8 +292,9 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
       <a href="#prompt" className="skip-link">
         Skip to create an image
       </a>
-      <section className="studio-hero" aria-labelledby="studio-title">
+      <section className="studio-hero" aria-labelledby="studio-title" data-idea={activeIdea}>
         <div className="studio-hero-art" aria-hidden="true" />
+        <NovaExperience idea={activeIdea} />
         <SiteHeader
           overlay
           onGallery={navigateGallery}
@@ -297,8 +303,8 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
         <div className="studio-hero-content">
           <p className="hero-kicker">An open space for imagination</p>
           <h1 id="studio-title" className="hero-title">
-            A little thought.
-            <br />A whole new <em>world.</em>
+            <span className="hero-line"><span>A little thought.</span></span>
+            <span className="hero-line hero-line-second"><span>A whole new <em>world.</em></span></span>
           </h1>
           <p className="hero-description">
             The extraordinary starts with an idea.
@@ -336,11 +342,15 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
             />
             <div className="prompt-starters">
               <span>NEED A SPARK?</span>
-              {STARTERS.map((starter) => (
+              {STARTERS.map((starter, index) => (
                 <button
                   key={starter.label}
                   type="button"
                   disabled={loading}
+                  onMouseEnter={() => setActiveIdea(index)}
+                  onMouseLeave={() => setActiveIdea(-1)}
+                  onFocus={() => setActiveIdea(index)}
+                  onBlur={() => setActiveIdea(-1)}
                   onClick={() => {
                     setPrompt(starter.prompt);
                     setModel(starter.model);
@@ -357,11 +367,7 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
           </div>
         </div>
       </section>
-      <div className="studio-manifesto">
-        <span>YOUR WORDS. YOUR WORLD.</span>
-        <p>A place to experiment. A space to surprise yourself.</p>
-        <span aria-hidden>✳</span>
-      </div>
+      <StoryBridge images={room} />
       <InspirationRail
         room={room}
         mine={mine}
@@ -369,15 +375,17 @@ function StudioApp({ initialRoom }: { initialRoom: GenerationLike[] }) {
         mineError={mineError}
         tab={tab}
         setTab={setTab}
-        onPick={(image, source) => {
+        onPick={(image, source, origin) => {
           setSelected(image);
           setSelectedSource(source);
+          setSelectedOrigin(origin);
         }}
       />
       {selected && (
         <ImageDetail
           image={selected}
           source={selectedSource}
+          origin={selectedOrigin}
           onClose={() => setSelected(null)}
           onUse={usePrompt}
         />

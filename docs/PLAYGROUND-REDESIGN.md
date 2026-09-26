@@ -78,3 +78,11 @@ The first automation run used an unsuitable label lookup for native selects; it 
 | Gallery | Previous gallery presentation | [Editorial layout](previews/playground-gallery.webp) |
 
 Remaining limitations: tested in desktop Chrome and emulated viewport sizes, not on physical iOS/Android devices. Real community images retain their existing quality and content. Authentication remains email/password; paid top-ups, video/audio generation, email verification, and password reset remain outside the current product scope.
+
+## Production verification
+
+- Design commit `8cdc729` pushed to the public GitHub repository and deployed to Vercel Production; deployment `dpl_m3hjwqWFBDcyTi7QQ6ZMDnJp6SCD` reached `READY`.
+- Live alias: https://higgsfield-clone-rose.vercel.app/
+- Public desktop (1440px) and mobile (390px) checks pass for the new hero, gallery detail, Escape, search, and overflow, without browser errors or failed asset responses.
+- Production mobile signup, live 100 → 95 credit deduction, completed image viewer, and final 95 balance pass. Test account and image were removed afterward.
+- The first production image attempt did not reach the result viewer. Vercel logs confirmed a generation-provider error. The next attempt completed. Provider availability remains external; the real refund path was separately verified on the isolated failure server. No mock response or fallback stock result was introduced.

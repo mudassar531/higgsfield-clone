@@ -10,6 +10,10 @@ Nova turns a written idea into an image. The original interface pairs an immersi
 - **Be clear about what is real.** Community images come from saved generations; the included starter artworks are labeled. Styles are creative instructions to one provider, not three invented AI models. Credit balances come from the API.
 - **Make room on small screens.** The composer stacks its controls, navigation gets a menu, image details become a sheet, and the gallery becomes two columns. Keyboard focus, Escape, empty states, and reduced motion are handled.
 
+## Scope
+
+Higgsfield has grown into a broad creative suite with separate image, video, audio, effects, Cinema Studio, Genjutsu, MCP, API, and business tools. Nova deliberately rebuilds one end-to-end slice: prompt-to-image creation, a real generation provider, saved personal work, and a browsable gallery. It does not pretend to implement the rest of Higgsfield’s model catalogue, OAuth providers, subscriptions, or studios. The assignment rewards product judgment as well as polish; a complete image flow keeps generation, credits, persistence, and responsive UX real within the available time.
+
 The hero is original generated artwork, not an image copied from a reference website. Its source and exact prompt are in [the art-direction notes](docs/ART-DIRECTION.md).
 
 ## Real backend
@@ -17,6 +21,7 @@ The hero is original generated artwork, not an image copied from a reference web
 Next.js App Router and TypeScript, React 19, Tailwind 4, private Neon Postgres, and Vercel Blob for public image files.
 
 - Accounts use scrypt password hashes and an HTTP-only signed session cookie.
+- Sign-up and sign-in use real email/password accounts in Postgres. Google OAuth, email verification, and password reset are not implemented.
 - New accounts receive 100 credits. Each generation costs 5. A conditional SQL update prevents concurrent requests from overspending; failures add back only that request’s cost. The API streams the confirmed deduction immediately and streams the refunded balance on failure. The header and composer show the remaining balance; visible tabs also refresh it every 10 seconds.
 - Image requests reach Pollinations through the server. Image bytes are validated, saved to Blob, and recorded in Postgres with their owner, prompt, style, and frame.
 - Personal collections are scoped to the authenticated account. Finished images and prompts are also visible in the community gallery.

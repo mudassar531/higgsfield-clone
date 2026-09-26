@@ -4,6 +4,8 @@
 
 Nova now has its own visual language: original portal artwork, forest green and terracotta, warm paper surfaces, generous type, and an image-led creative flow. A visitor can immediately write an idea, borrow a starter, or explore community prompts. Sign-in, credits, personal collections, and small-screen interactions use the same design.
 
+The product scope is an intentional vertical slice, not a claim to reproduce Higgsfield’s full suite. Higgsfield now spans image and video generation, audio, Cinema Studio, Genjutsu, API/MCP, and more. Nova delivers one working prompt-to-image flow with real provider calls, Postgres-backed accounts and credits, saved generations, refunds on failed jobs, and a responsive interface. Its sign-in is real email/password auth; Google OAuth and those additional studios are outside this assignment build.
+
 ## Suggested walkthrough
 
 1. Open the studio. Explain the idea behind the landscape, typography, and on-page composer.
@@ -15,10 +17,8 @@ Nova now has its own visual language: original portal artwork, forest green and 
 
 ## Required before resubmission
 
-- Connect the private database, migrate the existing records, and verify auth and generation against it.
-- Verify the deployed version, then remove the old public account JSON after the migration backup is confirmed.
-- Record the requested one-minute personal introduction. This must be Mudassar speaking about something true that is not on the CV.
-- Add the real Loom or publicly shared Drive link to the assignment submission. No placeholder video link is included in the app.
+- Replace or repair the walkthrough URL if it is still `https://share.vidyard.com/watch/CuJPkXmpgzjHzKLrowvtP`; an unauthenticated check returned HTTP 404. Confirm the public link opens in a signed-out browser.
+- Confirm the submitted camera-on video is at most five minutes and includes the requested one-minute personal introduction about something true that is not on the CV. The recording is supplied by Mudassar; it cannot be verified from the repository.
 - Update the existing submission at https://www.8x.careers/candidate/assignments/fe1ac213-7408-4e9d-9899-123793ca6e04.
 
 ## One-minute intro structure

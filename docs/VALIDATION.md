@@ -37,4 +37,4 @@ Mobile browser checks also passed against both real servers: form-based signup, 
 - Vercel production build completed and the deployment reached `READY`.
 - The public mobile browser flow passed: signup, streamed 100 → 95 credit deduction, completed image saved to the personal collection, and final 95 credit balance.
 - The same production origin passed API signup/login, DB reads, image generation, Blob image retrieval, personal-gallery ownership, and final balance checks.
-- The old public account JSON was deleted after the database cutover and verified as HTTP 404. Its private migration backup remains outside Git.
+- The old public account and generation JSON files were removed after the database cutover; the private migration backup remains outside Git. The former account URL was verified as HTTP 404.
